@@ -1,0 +1,18 @@
+{
+  "name": "torrent-service",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "a torrent streaming service",
+  "main": "index.js",
+  "author": "hehehe",
+  "license": "MIT",
+  "dependencies": {
+    "archiver": "^6.0.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-status-monitor": "^1.3.4",
+    "morgan": "^1.10.0",
+    "webtorrent": "^2.1.27",
+    "zlib": "^1.0.5"
+  }
+}
