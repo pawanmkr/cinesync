@@ -6,6 +6,9 @@
   "main": "index.js",
   "author": "hehehe",
   "license": "MIT",
+  "scripts": {
+    "start:watch": "node --watch src/index"
+  },
   "dependencies": {
     "archiver": "^6.0.1",
     "dotenv": "^16.3.1",
