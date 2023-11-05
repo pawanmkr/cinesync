@@ -1,5 +1,5 @@
 import express from "express";
-import {getMetadata, streamFile} from "./controller.js";
+import { getMetadata, streamFile } from "./controller.js";
 
 const router = express.Router()
 

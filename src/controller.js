@@ -2,42 +2,46 @@ import WebTorrent from "webtorrent";
 import path from 'path'
 
 export async function getMetadata(req, res) {
-  const {magnetUri} = req.body;
+  const { magnetUri } = req.body;
   const client = new WebTorrent();
 
   const files = []
 
   client.add(magnetUri, (torrent) => {
     torrent.files.forEach(file => {
-      files.push({
-        "name": file.name,
-        "size": file.size
-      })
+      if (file.type.includes('video') || file.type.includes("octet-stream")) {
+        files.push({
+          "name": file.name,
+          "path": file.path,
+          "size": Math.round(file.size / 1000000)
+        })
+      }
     });
     res.send(files)
   })
 }
 
 export async function streamFile(req, res) {
-  let {index, magnetUri} = req.query;
-  index = parseInt(index)
+  console.log("Entered: function streamFile()")
+  let { filePath, magnetUri } = req.query;
 
   const client = new WebTorrent();
   let totalProgress = 0;
-  let rounds = 0;
 
   client.add(magnetUri, (torrent) => {
-    if (index > torrent.files.length - 1) {
-      return res.status(404).send(`This torrent has only ${torrent.files.length} files`)
-    }
+    const file = torrent.files.find(file => {
+      console.log("Finding file...")
+      return file.path === filePath;
+    })
 
-    const file = torrent.files[index]
+    console.log(file.length)
+
     if (!file) {
       return res.status(404).send(`File not found in the torrent.`);
     }
 
     res.setHeader("Content-Type", "application/octet-stream")
-    res.setHeader("Content-Length", file.size)
+    res.setHeader("Content-Length", file.length)
     res.setHeader("Content-disposition", "attachment; filename=" + path.basename(file.name))
 
     const totoalFileSize = file.size
@@ -47,7 +51,6 @@ export async function streamFile(req, res) {
 
     stream.on('error', (error) => {
       stream.destroy()
-      res.status(500).send(error)
     })
 
     stream.on('data', (chunk) => {
@@ -58,13 +61,14 @@ export async function streamFile(req, res) {
         console.log(currentProgress + "%  --->  " + mb + "MB")
       }
       totalProgress = currentProgress;
-      res.write(chunk)
     })
+
+    stream.pipe(res)
 
     stream.on('end', () => {
       res.end()
       client.destroy(function (err) {
-        console.log(err)
+        if (err) console.log(err)
       })
     })
   })
