@@ -6,7 +6,12 @@
   "main": "index.js",
   "author": "hehehe",
   "license": "MIT",
+  "engines": {
+    "yarn": "^0.14.0",
+    "node": "21.1.0"
+  },
   "scripts": {
+    "start": "node src/index.js",
     "start:watch": "node --watch src/index"
   },
   "dependencies": {

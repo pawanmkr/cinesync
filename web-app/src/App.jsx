@@ -16,9 +16,10 @@ const App = () => {
     }
 
     // https://163b-103-183-33-138.ngrok-free.app
+    // https://cinesync-gvlo.onrender.com
 
     try {
-      const res = await axios.post(`http://localhost:9898/metadata`, {
+      const res = await axios.post(`https://cinesync-gvlo.onrender.com/metadata`, {
         magnetUri: magnet
       })
 
@@ -34,7 +35,7 @@ const App = () => {
       throw new Error("path not found");
     }
 
-    const endpoint = `http://localhost:9898/stream?magnetUri=${magnet}&filePath=${path}`
+    const endpoint = `https://cinesync-gvlo.onrender.com/stream?magnetUri=${magnet}&filePath=${path}`
 
     const videoElement = document.createElement('video');
     videoElement.controls = true;
