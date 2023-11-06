@@ -6,11 +6,9 @@
   "main": "index.js",
   "author": "hehehe",
   "license": "MIT",
-  "engines": {
-    "yarn": "^0.14.0"
-  },
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "start:watch": "node --watch src/index.js"
   },
   "dependencies": {
     "archiver": "^6.0.1",

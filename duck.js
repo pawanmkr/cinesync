@@ -1,6 +1,5 @@
 import WebTorrent from "webtorrent";
 import path from 'path'
-import fs from 'fs'
 
 export async function getMetadata(req, res) {
   const { magnetUri } = req.body;
@@ -23,16 +22,13 @@ export async function getMetadata(req, res) {
 }
 
 export async function streamFile(req, res) {
-  console.log("Entered: function streamFile()")
   let { filePath, magnetUri } = req.query;
 
   const client = new WebTorrent();
   let totalProgress = 0;
-  let canWrite = true;
 
   client.add(magnetUri, (torrent) => {
     const file = torrent.files.find(file => {
-      console.log("Finding file...")
       return file.path === filePath;
     })
 
@@ -48,41 +44,13 @@ export async function streamFile(req, res) {
 
     const totoalFileSize = file.size
 
-    const stream = file.createReadStream({
-      highWaterMark: 16 * 1024,
-    });
+    const stream = file.createReadStream();
     let uploadBytes = 0
 
-    stream.on('open', () => {
-      console.log("opened")
-    })
-
-    res.on('drain', () => {
-      canWrite = true;
-      stream.resume();
-    })
-
     stream.on('error', (error) => {
-      console.error('Stream error:', error);
-      res.end();
-      client.destroy(function (err) {
-        if (err) console.error('Client destroy error:', err);
-      });
-    });
-
-    res.on('error', (error) => {
-      console.error('Response error:', error);
-      stream.destroy();
-      client.destroy(function (err) {
-        if (err) console.error('Client destroy error:', err);
-      });
-    });
-
-    client.on('error', (error) => {
-      console.error('Client error:', error);
-      stream.destroy();
-      res.end();
-    });
+      stream.destroy()
+      res.status(500).send(error)
+    })
 
     stream.on('data', (chunk) => {
       uploadBytes += chunk.length
@@ -92,11 +60,7 @@ export async function streamFile(req, res) {
         console.log(currentProgress + "%  --->  " + mb + "MB")
       }
       totalProgress = currentProgress;
-
-      if (!res.write(chunk)) {
-        canWrite = false;
-        stream.pause();
-      }
+      res.write(chunk)
     })
 
     stream.on('end', () => {
