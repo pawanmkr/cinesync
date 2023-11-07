@@ -1,9 +1,13 @@
 import express from "express";
-import { getMetadata, streamFile } from "./controller.js";
+import { getMetadata, handleStreaming } from "./controller.js";
 
 const router = express.Router()
 
+router.get('/health', (req, res) => {
+  res.sendStatus(200)
+})
+
 router.post('/metadata', getMetadata)
-router.get('/stream', streamFile)
+router.get('/stream', handleStreaming)
 
 export default router

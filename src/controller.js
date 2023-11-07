@@ -1,45 +1,52 @@
-import WebTorrent from "webtorrent";
 import path from 'path'
-import fs from 'fs'
+import { client } from './server.js';
 
 export async function getMetadata(req, res) {
   const { magnetUri } = req.body;
-  const client = new WebTorrent();
-
   const files = []
 
-  client.add(magnetUri, (torrent) => {
-    torrent.files.forEach(file => {
-      if (file.type.includes('video') || file.type.includes("octet-stream")) {
-        files.push({
-          "name": file.name,
-          "path": file.path,
-          "size": Math.round(file.size / 1000000)
-        })
-      }
-    });
-    res.send(files)
-  })
+  try {
+    client.add(magnetUri, (torrent) => {
+      console.log("\n> Adding torrent...\n")
+      torrent.files.forEach(file => {
+        if (file.type.includes('video') || file.type.includes("octet-stream")) {
+          files.push({
+            "name": file.name,
+            "path": file.path,
+            "size": Math.round(file.size / 1000000)
+          })
+        }
+      })
+      client.destroy()
+
+      res.send(files)
+    })
+  } catch (error) {
+    console.log(error)
+  }
 }
 
-export async function streamFile(req, res) {
-  console.log("Entered: function streamFile()")
+export async function handleStreaming(req, res) {
   let { filePath, magnetUri } = req.query;
 
-  const client = new WebTorrent();
-  let totalProgress = 0;
-  let canWrite = true;
-
+  console.log("\n> Adding torrent...")
   client.add(magnetUri, (torrent) => {
+    console.log("\n> Torrent is ready to serve")
+
+    let totalProgress = 0;
+    let canWrite = true;
+
+    console.log("\n> Finding your file...")
     const file = torrent.files.find(file => {
-      console.log("Finding file...")
       return file.path === filePath;
     })
 
-    console.log(file.length)
+    file.select();
+
+    console.log('\n> ' + Math.round(file.length / 1000000) + ' MB')
 
     if (!file) {
-      return res.status(404).send(`File not found in the torrent.`);
+      return res.status(404).send(`\n> File not found in the torrent.`);
     }
 
     res.setHeader("Content-Type", "application/octet-stream")
@@ -49,13 +56,9 @@ export async function streamFile(req, res) {
     const totoalFileSize = file.size
 
     const stream = file.createReadStream({
-      highWaterMark: 16 * 1024,
+      highWaterMark: 2048 * 1024,
     });
     let uploadBytes = 0
-
-    stream.on('open', () => {
-      console.log("opened")
-    })
 
     res.on('drain', () => {
       canWrite = true;
@@ -78,18 +81,12 @@ export async function streamFile(req, res) {
       });
     });
 
-    client.on('error', (error) => {
-      console.error('Client error:', error);
-      stream.destroy();
-      res.end();
-    });
-
     stream.on('data', (chunk) => {
       uploadBytes += chunk.length
       let currentProgress = Math.round((uploadBytes / totoalFileSize) * 100);
       const mb = Math.round(uploadBytes / 1000000);
       if (currentProgress !== totalProgress) {
-        console.log(currentProgress + "%  --->  " + mb + "MB")
+        console.log('> ' + currentProgress + "%  --->  " + mb + "MB")
       }
       totalProgress = currentProgress;
 
@@ -100,10 +97,24 @@ export async function streamFile(req, res) {
     })
 
     stream.on('end', () => {
+      console.log("\n> Stream ended")
       res.end()
       client.destroy(function (err) {
         if (err) console.log(err)
       })
     })
+
+    res.on('close', () => {
+      console.log("\n> Response ended")
+      client.remove(magnetUri, {
+        destroyStore: true
+      })
+    })
+
+    client.on('error', (error) => {
+      console.error('Client error:', error);
+      client.destroy();
+      res.end();
+    });
   })
 }
